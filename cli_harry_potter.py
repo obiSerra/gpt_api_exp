@@ -2,7 +2,7 @@ import argparse
 import json
 
 from gpt_client.client import GptClient
-from gpt_client.grimorium import generate_prompt_ita
+from gpt_client.grimorium import generate_prompt, generate_prompt_ita
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate code from a prompt")
@@ -15,13 +15,14 @@ if __name__ == "__main__":
         help="the model to use",
     )
 
-    parser.add_argument(
-        "--output", dest="output", type=str, default="", help="the output file to use"
-    )
+    parser.add_argument("--output", dest="output", type=str, default="", help="the output file to use")
 
     args = parser.parse_args()
 
     client = GptClient(model=args.model)
+
+    system_prompt = generate_prompt()
+    client.system_prompt(system_prompt)
 
     books = [
         "Harry Potter e la pietra filosofale",
@@ -40,28 +41,29 @@ if __name__ == "__main__":
     # libro: <libro>
     # """
     while True:
-        prompt = input("[?] Un incantesimo per: ")
+        prompt = input("[?] A spell for: ")
 
-        full_prompt = generate_prompt_ita(prompt)
+        full_prompt = """```{prompt}```"""
 
         client.answer(full_prompt)
+        print("\n\n")
         # print(f"User: {client.last_propmpt()}")
         try:
-            answer = json.loads(client.last_answer())
-            if answer["incantesimo"].startswith("**"):
-                print(
-                    
-                    f"[!]: Incantesimo inventato: {answer['incantesimo'].replace('**', '')}"
-                )
-            else:
-                print(
-                    f"""[!]: Incantesimo: {answer['incantesimo']} \n\n, 
-Descrizione: {answer['descrizione']} \n\n,
-Libro: {answer['libro']} \n\n, Usato da: {answer['usato da']}\n\n"""
-                )
+            answer = client.last_answer()
+            if answer == "nessun incantesimo trovato":
+                print(f"[!]: {answer_data}")
+                break
+
+            answer_data = json.loads(answer)
+            print(f"[!]: Incantesimo: {answer_data['spell']}\n")
+            print(f"     Descrizione: {answer_data['description']}")
+            print(f"     Esempio: {answer_data['example']}")
+            print(f"     Usato_da: {answer_data['used_by']}")
+            print(f"     Libro: {answer_data['book']}")
+            print("\n\n")
 
         except Exception as e:
             print(e)
             print(f"ERROR [!]: {client.last_answer()}")
-            exit(0)
+            
         # print(f"[>]: {answer}")
